@@ -13,7 +13,7 @@ It's crucial to protect sensitive information, such as encryption keys, password
 2. **Start using it**: Use the `ProtectMemory`, `UnProtectMemory`, and `ReleaseProtectedMemory` procedures to secure your memory.
 3. **Release the Memory**: Ensure that memory is released and cleared after use by calling `ReleaseAllProtectedMemory`.
 
-### Example
+### Example: protect constant data
 
 ```delphi
 uses
@@ -23,12 +23,18 @@ var
   Data: array[0..255] of Byte;
   DataPtr: Pointer;
 begin
+  Data[0] := 99;
+  Data[1] := 11;
+  Data[2] := 22;
+  Data[3] := 33;
+  Data[4] := 44;
+  Data[5] := 55;
   DataPtr := @Data[0];
   
   // Protect the memory (prevents access to the memory region)
   ProtectMemory(DataPtr, SizeOf(Data));
 
-  // Accessing the protected memory here will cause an exception
+  // Accessing the protected memory here will return zeros.
   // Unprotect the memory before accessing it
   UnProtectMemory(DataPtr);
 
@@ -37,9 +43,46 @@ begin
 end;
 ```
 
+### Example: protect delphi managed string
+
+```delphi
+uses
+  ProtectedMemory;
+
+var
+  SensitiveStr: string;
+  NonSensitiveStr: string;
+  DataPtr: Pointer;
+begin
+  SensitiveStr := 'Sensitive Data';
+  NonSensitiveStr := 'Not Sensitive Data';
+
+  // Get a pointer to SensitiveStr's memory
+  DataPtr := Pointer(SensitiveStr);
+
+  // Protect the memory region containing SensitiveStr
+  Writeln('Protecting memory...');
+  ProtectMemory(DataPtr, Length(SensitiveStr) * SizeOf(Char));
+
+  // Accessing SensitiveStr here will return zeros or show undefined behavior
+  Writeln('SensitiveStr after protection: ', SensitiveStr);
+
+  // You can still access NonSensitiveStr, which is unaffected
+  NonSensitiveStr := 'Updated Non-Sensitive Data';
+  Writeln('NonSensitiveStr: ', NonSensitiveStr);
+
+  // Release the protected memory and clear its content
+  Writeln('Releasing memory...');
+  ReleaseProtectedMemory(DataPtr);
+
+  // SensitiveStr is now restored
+  Writeln('Restored SensitiveStr: ', SensitiveStr);
+end;
+```
+
 ### Procedures
 
-- **`ProtectMemory(DataPtr: Pointer; Size: NativeUInt)`**: Protects the specified memory region by setting it to `PAGE_NOACCESS` and locking it to prevent paging.
+- **`ProtectMemory(var DataPtr: Pointer; Size: NativeUInt)`**: Protects the specified memory region by setting it to `PAGE_NOACCESS` and locking it to prevent paging. The data is copied to a new protected memory block, and the original pointer is updated to point to this protected block.
   
 - **`UnProtectMemory(DataPtr: Pointer)`**: Restores the memory protection to `PAGE_READWRITE` and removes the region from the list of protected memory blocks.
 

@@ -1,7 +1,7 @@
 {
   *****************************************************
   * Access protection for memory regions              *
-  * Free Source Code snippt (For Delphi)              *
+  * Free Source Code snippet (For Delphi)             *
   *****************************************************
 
   Unit Information:
@@ -42,17 +42,17 @@ unit ProtectedMemory;
 interface
 
 uses
-  Windows, SysUtils;
+   System.SysUtils,Winapi.Windows;
 
 // Exposed Procedures
 
-// Protects the specified memory region by setting it to PAGE_NOACCESS and locking it.
-procedure ProtectMemory(DataPtr: Pointer; Size: NativeUInt);
+// Allocates protected memory, moves original data to the protected area, and returns the new pointer.
+procedure ProtectMemory(var DataPtr: Pointer; Size: NativeUInt);
 
-// Unprotects the specified memory region by restoring its original access and unlocking it.
+// Unprotects the specified memory region by restoring its original access.
 procedure UnProtectMemory(DataPtr: Pointer);
 
-// Releases the specified memory region by restoring access, clearing its memory, and removing it from the protected list.
+// Releases the specified memory region by restoring access, clearing its memory, and freeing it.
 procedure ReleaseProtectedMemory(DataPtr: Pointer);
 
 // Releases and clears all protected memory regions.
@@ -66,6 +66,7 @@ uses
 type
   TProtectedMemory = record
     DataPtr: Pointer;
+    OriginalDataPtr: Pointer;
     Size: NativeUInt;
     OldProtect: DWORD;
   end;
@@ -74,7 +75,7 @@ type
 type
   TProtectedMemoryList = class(TList<PProtectedMemory>)
   public
-    procedure ProtectMemory(DataPtr: Pointer; Size: NativeUInt);
+    procedure ProtectMemory(var DataPtr: Pointer; Size: NativeUInt);
     procedure ReleaseMemory(DataPtr: Pointer; ClearTheMemory: Boolean);
     procedure ClearList;
     destructor Destroy; override;
@@ -92,17 +93,19 @@ begin
   Result := OldProtect;
 end;
 
-procedure RemoveMemoryProtection(const DataPtr: Pointer; const Size: NativeUInt; const OldProtect: DWORD; const ClearTheMemory: Boolean);
+procedure RemoveMemoryProtection(const DataPtr,OriginalDataPtr: Pointer; const Size: NativeUInt; const OldProtect: DWORD; const ClearTheMemory: Boolean);
 begin
   if ClearTheMemory then
   begin
     SetMemoryProtection(DataPtr, Size, PAGE_READWRITE);
     ZeroMemory(DataPtr, Size);
-  end;
+  end else
   if (not ClearTheMemory) or (OldProtect <> PAGE_READWRITE) then
+  begin
     SetMemoryProtection(DataPtr, Size, OldProtect);
-  if not VirtualUnlock(DataPtr, Size) then
-    RaiseLastOSError;
+    System.Move(DataPtr^, OriginalDataPtr^, Size);
+    ZeroMemory(DataPtr, Size);
+  end;
 end;
 
 function FindProtectedMemory(DataPtr: Pointer): PProtectedMemory;
@@ -122,17 +125,25 @@ begin
   end;
 end;
 
-procedure TProtectedMemoryList.ProtectMemory(DataPtr: Pointer; Size: NativeUInt);
+procedure TProtectedMemoryList.ProtectMemory(var DataPtr: Pointer; Size: NativeUInt);
 var
   OldProtect: DWORD;
   NewMem: PProtectedMemory;
+  ProtectedMemory: Pointer;
 begin
-  if not VirtualLock(DataPtr, Size) then
+  ProtectedMemory := VirtualAlloc(nil, Size, MEM_COMMIT or MEM_RESERVE, PAGE_READWRITE);
+  if ProtectedMemory = nil then
     RaiseLastOSError;
-  OldProtect := SetMemoryProtection(DataPtr, Size, PAGE_NOACCESS);
+
+  System.Move(DataPtr^, ProtectedMemory^, Size);
+
+  OldProtect := SetMemoryProtection(ProtectedMemory, Size, PAGE_NOACCESS);
+
   try
     New(NewMem);
-    NewMem^.DataPtr := DataPtr;
+    NewMem^.DataPtr := ProtectedMemory;
+    NewMem^.OriginalDataPtr := DataPtr;
+
     NewMem^.Size := Size;
     NewMem.OldProtect := OldProtect;
     try
@@ -142,9 +153,13 @@ begin
       raise;
     end;
   except
-    RemoveMemoryProtection(DataPtr, Size, OldProtect, False);
+    RemoveMemoryProtection(ProtectedMemory,DataPtr, Size, OldProtect, False);
     raise;
   end;
+
+  ZeroMemory(DataPtr,Size);
+
+  DataPtr := ProtectedMemory;
 end;
 
 procedure TProtectedMemoryList.ReleaseMemory(DataPtr: Pointer; ClearTheMemory: Boolean);
@@ -157,7 +172,7 @@ begin
     if Self[i]^.DataPtr = DataPtr then
     begin
       Mem := Self[i];
-      RemoveMemoryProtection(Mem^.DataPtr, Mem^.Size, Mem^.OldProtect, ClearTheMemory);
+      RemoveMemoryProtection(Mem^.DataPtr,Mem^.OriginalDataPtr, Mem^.Size, Mem^.OldProtect, ClearTheMemory);
       Self.Delete(i);
       Dispose(Mem);
       Exit;
@@ -173,7 +188,7 @@ begin
   for i := 0 to Self.Count - 1 do
   begin
     Mem := Self[i];
-    RemoveMemoryProtection(Mem^.DataPtr, Mem^.Size, Mem^.OldProtect, True);
+    RemoveMemoryProtection(Mem^.DataPtr, Mem^.OriginalDataPtr, Mem^.Size, Mem^.OldProtect, True);
     Dispose(Mem);
   end;
   Self.Clear;
@@ -185,7 +200,7 @@ begin
   inherited Destroy;
 end;
 
-procedure ProtectMemory(DataPtr: Pointer; Size: NativeUInt);
+procedure ProtectMemory(var DataPtr: Pointer; Size: NativeUInt);
 begin
   ProtectedMemoryList.ProtectMemory(DataPtr, Size);
 end;
