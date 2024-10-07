@@ -49,10 +49,10 @@ uses
 // Protects the specified memory region by setting it to PAGE_NOACCESS and locking it.
 procedure ProtectMemory(DataPtr: Pointer; Size: NativeUInt);
 
-// Unprotects the specified memory region by restoring PAGE_READWRITE access.
+// Unprotects the specified memory region by restoring its original access and unlocking it.
 procedure UnProtectMemory(DataPtr: Pointer);
 
-// Releases the specified memory region by restoring access, clearing the memory, and removing it from the protected list.
+// Releases the specified memory region by restoring access, clearing its memory, and removing it from the protected list.
 procedure ReleaseProtectedMemory(DataPtr: Pointer);
 
 // Releases and clears all protected memory regions.
@@ -67,14 +67,15 @@ type
   TProtectedMemory = record
     DataPtr: Pointer;
     Size: NativeUInt;
+    OldProtect: DWORD;
   end;
   PProtectedMemory = ^TProtectedMemory;
 
 type
   TProtectedMemoryList = class(TList<PProtectedMemory>)
   public
-    procedure AddToList(DataPtr: Pointer; Size: NativeUInt);
-    procedure RemoveFromList(DataPtr: Pointer);
+    procedure ProtectMemory(DataPtr: Pointer; Size: NativeUInt);
+    procedure ReleaseMemory(DataPtr: Pointer; ClearTheMemory: Boolean);
     procedure ClearList;
     destructor Destroy; override;
   end;
@@ -82,40 +83,71 @@ type
 var
   ProtectedMemoryList: TProtectedMemoryList;
 
-procedure SetMemoryProtection(const DataPtr: Pointer; const Size: NativeUInt; Protect: DWORD);
+function SetMemoryProtection(const DataPtr: Pointer; const Size: NativeUInt; Protect: DWORD): DWORD;
 var
   OldProtect: DWORD;
 begin
   if not VirtualProtect(DataPtr, Size, Protect, @OldProtect) then
     RaiseLastOSError;
+  Result := OldProtect;
 end;
 
-function GetProtectedMemorySize(DataPtr: Pointer): NativeUInt;
+procedure RemoveMemoryProtection(const DataPtr: Pointer; const Size: NativeUInt; const OldProtect: DWORD; const ClearTheMemory: Boolean);
+begin
+  if ClearTheMemory then
+  begin
+    SetMemoryProtection(DataPtr, Size, PAGE_READWRITE);
+    ZeroMemory(DataPtr, Size);
+  end;
+  if (not ClearTheMemory) or (OldProtect <> PAGE_READWRITE) then
+    SetMemoryProtection(DataPtr, Size, OldProtect);
+  if not VirtualUnlock(DataPtr, Size) then
+    RaiseLastOSError;
+end;
+
+function FindProtectedMemory(DataPtr: Pointer): PProtectedMemory;
 var
   i: Integer;
+  Mem: PProtectedMemory;
 begin
-  Result := 0;
+  Result := nil;
   for i := 0 to ProtectedMemoryList.Count - 1 do
   begin
-    if ProtectedMemoryList[i]^.DataPtr = DataPtr then
+    Mem := ProtectedMemoryList[i];
+    if Mem^.DataPtr = DataPtr then
     begin
-      Result := ProtectedMemoryList[i]^.Size;
+      Result := Mem;
       Exit;
     end;
   end;
 end;
 
-procedure TProtectedMemoryList.AddToList(DataPtr: Pointer; Size: NativeUInt);
+procedure TProtectedMemoryList.ProtectMemory(DataPtr: Pointer; Size: NativeUInt);
 var
+  OldProtect: DWORD;
   NewMem: PProtectedMemory;
 begin
-  New(NewMem);
-  NewMem^.DataPtr := DataPtr;
-  NewMem^.Size := Size;
-  Self.Add(NewMem);
+  if not VirtualLock(DataPtr, Size) then
+    RaiseLastOSError;
+  OldProtect := SetMemoryProtection(DataPtr, Size, PAGE_NOACCESS);
+  try
+    New(NewMem);
+    NewMem^.DataPtr := DataPtr;
+    NewMem^.Size := Size;
+    NewMem.OldProtect := OldProtect;
+    try
+      Self.Add(NewMem);
+    except
+      Dispose(NewMem);
+      raise;
+    end;
+  except
+    RemoveMemoryProtection(DataPtr, Size, OldProtect, False);
+    raise;
+  end;
 end;
 
-procedure TProtectedMemoryList.RemoveFromList(DataPtr: Pointer);
+procedure TProtectedMemoryList.ReleaseMemory(DataPtr: Pointer; ClearTheMemory: Boolean);
 var
   i: Integer;
   Mem: PProtectedMemory;
@@ -125,9 +157,10 @@ begin
     if Self[i]^.DataPtr = DataPtr then
     begin
       Mem := Self[i];
+      RemoveMemoryProtection(Mem^.DataPtr, Mem^.Size, Mem^.OldProtect, ClearTheMemory);
       Self.Delete(i);
       Dispose(Mem);
-      Break;
+      Exit;
     end;
   end;
 end;
@@ -140,8 +173,7 @@ begin
   for i := 0 to Self.Count - 1 do
   begin
     Mem := Self[i];
-    SetMemoryProtection(Mem^.DataPtr, Mem^.Size, PAGE_READWRITE);
-    ZeroMemory(Mem^.DataPtr, Mem^.Size);
+    RemoveMemoryProtection(Mem^.DataPtr, Mem^.Size, Mem^.OldProtect, True);
     Dispose(Mem);
   end;
   Self.Clear;
@@ -155,35 +187,17 @@ end;
 
 procedure ProtectMemory(DataPtr: Pointer; Size: NativeUInt);
 begin
-  if not VirtualLock(DataPtr, Size) then
-    RaiseLastOSError;
-
-  SetMemoryProtection(DataPtr, Size, PAGE_NOACCESS);
-
-  ProtectedMemoryList.AddToList(DataPtr, Size);
+  ProtectedMemoryList.ProtectMemory(DataPtr, Size);
 end;
 
 procedure UnProtectMemory(DataPtr: Pointer);
-var
-  Size: NativeUInt;
 begin
-  Size := GetProtectedMemorySize(DataPtr);
-  if Size = 0 then exit;
-  SetMemoryProtection(DataPtr, Size, PAGE_READWRITE);
-  ProtectedMemoryList.RemoveFromList(DataPtr);
+  ProtectedMemoryList.ReleaseMemory(DataPtr, False);
 end;
 
 procedure ReleaseProtectedMemory(DataPtr: Pointer);
-var
-  Size: NativeUInt;
 begin
-  Size := GetProtectedMemorySize(DataPtr);
-  if Size = 0 then exit;
-  SetMemoryProtection(DataPtr, Size, PAGE_READWRITE);
-
-  ZeroMemory(DataPtr, Size);
-
-  ProtectedMemoryList.RemoveFromList(DataPtr);
+  ProtectedMemoryList.ReleaseMemory(DataPtr, True);
 end;
 
 procedure ReleaseAllProtectedMemory;
