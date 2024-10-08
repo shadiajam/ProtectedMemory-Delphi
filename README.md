@@ -71,9 +71,9 @@ begin
   NonSensitiveStr := 'Updated Non-Sensitive Data';
   Writeln('NonSensitiveStr: ', NonSensitiveStr);
 
-  // Release the protected memory and clear its content
+  // UnProtect Memory it's reutrn it's orginal data
   Writeln('Releasing memory...');
-  ReleaseProtectedMemory(DataPtr);
+  UnProtectMemory(DataPtr);
 
   // SensitiveStr is now restored
   Writeln('Restored SensitiveStr: ', SensitiveStr);
