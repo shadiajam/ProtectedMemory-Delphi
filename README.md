@@ -1,12 +1,12 @@
 
-# Protected Memory Unit for Delphi
+# Protected Memory for Delphi
 
-This unit provides a secure memory protection unit for Delphi, allowing developers to protect memory regions, preventing access and ensuring that sensitive data is cleared when no longer needed.
+This units provides a secure memory protection units for Delphi, allowing developers to protect memory regions, preventing access and ensuring that sensitive data is cleared when no longer needed.
 
-## Table of Contents
+## Contents
 
-- [Protected Memory Unit for Delphi](#protected-memory-unit-for-delphi)
-  - [Table of Contents](#table-of-contents)
+- [Protected Memory for Delphi](#protected-memory-for-delphi)
+  - [Contents](#contents)
   - [Why you need it!?](#why-you-need-it)
   - [Usage](#usage)
   - [What's New](#whats-new)
