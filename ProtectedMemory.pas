@@ -99,12 +99,14 @@ begin
   begin
     SetMemoryProtection(DataPtr, Size, PAGE_READWRITE);
     ZeroMemory(DataPtr, Size);
+    VirtualFree(DataPtr, 0, MEM_RELEASE); // Free the old memory
   end else
   if (not ClearTheMemory) or (OldProtect <> PAGE_READWRITE) then
   begin
     SetMemoryProtection(DataPtr, Size, OldProtect);
     System.Move(DataPtr^, OriginalDataPtr^, Size);
     ZeroMemory(DataPtr, Size);
+    VirtualFree(DataPtr, 0, MEM_RELEASE); // Free the old memory
   end;
 end;
 

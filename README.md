@@ -3,6 +3,22 @@
 
 This unit provides a secure memory protection unit for Delphi, allowing developers to protect memory regions, preventing access and ensuring that sensitive data is cleared when no longer needed.
 
+## Table of Contents
+
+- [Protected Memory Unit for Delphi](#protected-memory-unit-for-delphi)
+  - [Table of Contents](#table-of-contents)
+  - [Why you need it!?](#why-you-need-it)
+  - [Usage](#usage)
+  - [What's New](#whats-new)
+    - [1. Added `TProtectedStream` class](#1-added-tprotectedstream-class)
+  - [Examples](#examples)
+    - [Example: protect constant data](#example-protect-constant-data)
+    - [Example: protect delphi managed string](#example-protect-delphi-managed-string)
+    - [Example: TProtectedStream Usage](#example-tprotectedstream-usage)
+    - [Procedures](#procedures)
+  - [Author](#author)
+  - [Useful Unit, Right?](#useful-unit-right)
+
 ## Why you need it!?
 
 It's crucial to protect sensitive information, such as encryption keys, passwords, and other confidential data, from unauthorized access. Without proper memory protection, even temporarily stored sensitive data in memory can be vulnerable to attacks like memory dumps or process injection. This unit helps to lock and protect memory, ensuring that sensitive data is shielded and securely erased when no longer needed.
@@ -12,6 +28,17 @@ It's crucial to protect sensitive information, such as encryption keys, password
 1. **Clone or simply download the unit**: Clone the repository or download the `ProtectedMemory` unit to your Delphi project.
 2. **Start using it**: Use the `ProtectMemory`, `UnProtectMemory`, and `ReleaseProtectedMemory` procedures to secure your memory.
 3. **Release the Memory**: Ensure that memory is released and cleared after use by calling `ReleaseAllProtectedMemory`.
+4. **Please give it a 🌟 and share it with others**
+
+## What's New
+
+### 1. Added `TProtectedStream` class
+
+- A new `TProtectedStream` class was added, inheriting from `TMemoryStream`.
+- It uses `VirtualAlloc` for memory allocation and `VirtualProtect` to protect and unprotect the memory.
+- The `IsProtected` property lets you toggle between protected (no access) and unprotected (read/write) states.
+
+## Examples
 
 ### Example: protect constant data
 
@@ -77,6 +104,33 @@ begin
 
   // SensitiveStr is now restored
   Writeln('Restored SensitiveStr: ', SensitiveStr);
+end;
+```
+
+### Example: TProtectedStream Usage
+
+```delphi
+uses
+  ProtectedStream;
+
+var
+  Stream: TProtectedStream;
+  Data: AnsiString;
+  Buffer: array[0..255] of Byte;
+begin
+  Data := 'Sensitive Data';
+  
+  Stream := TProtectedStream.Create;
+  try
+    Stream.Write(PAnsiChar(Data)^, Length(Data));
+    Stream.IsProtected := True;  // Protect the memory
+
+    // Unprotect to read
+    Stream.IsProtected := False;
+    Stream.Read(Buffer, 10);
+  finally
+    Stream.Free;
+  end;
 end;
 ```
 
