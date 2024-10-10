@@ -1,23 +1,11 @@
 
 # Protected Memory for Delphi
 
-This units provides a secure memory protection units for Delphi, allowing developers to protect memory regions, preventing access and ensuring that sensitive data is cleared when no longer needed.
+> Safeguarding sensitive data from hackers or processes debuggers by protecting memory regions from access and ensuring data is cleared when no longer needed.
 
-## Contents
+[![Memory protection for Delphi](./img/cover.png)](https://github.com/shadiajam)
 
-- [Protected Memory for Delphi](#protected-memory-for-delphi)
-  - [Contents](#contents)
-  - [Why you need it!?](#why-you-need-it)
-  - [Usage](#usage)
-  - [What's New](#whats-new)
-    - [1. Added `TProtectedStream` class](#1-added-tprotectedstream-class)
-  - [Examples](#examples)
-    - [Example: protect constant data](#example-protect-constant-data)
-    - [Example: protect delphi managed string](#example-protect-delphi-managed-string)
-    - [Example: TProtectedStream Usage](#example-tprotectedstream-usage)
-    - [Procedures](#procedures)
-  - [Author](#author)
-  - [Useful Unit, Right?](#useful-unit-right)
+### [Usage](#usage) | [What's new](#whats-new) | [Examples](#examples) | [Procedures](#procedures)
 
 ## Why you need it!?
 
@@ -123,6 +111,7 @@ begin
   Stream := TProtectedStream.Create;
   try
     Stream.Write(PAnsiChar(Data)^, Length(Data));
+    Data := '';
     Stream.IsProtected := True;  // Protect the memory
 
     // Unprotect to read
