@@ -68,7 +68,7 @@ type
     FProtected: Boolean;
     procedure SetProtected(const Value: Boolean);
   protected
-    function Realloc(var NewCapacity: Longint): Pointer;reintroduce;override;
+    function Realloc(var NewCapacity: NativeInt): Pointer; reintroduce; override;
   public
     property IsProtected: Boolean Read FProtected write SetProtected;
     procedure AfterConstruction; override;
@@ -103,7 +103,7 @@ begin
   Result := NewPtr;
 end;
 
-function TProtectedStream.Realloc(var NewCapacity: Longint): Pointer;
+function TProtectedStream.Realloc(var NewCapacity: NativeInt): Pointer;
 const
   MemoryDelta = $2000; { Must be a power of 2 }
 begin
