@@ -5,16 +5,16 @@ program ProtectedStreamSample;
 {$R *.res}
 
 uses
-  ProtectedStream, SysUtils;
+  ProtectedMemoryStream, SysUtils;
 
 var
-  ProtectedStream: TProtectedStream;
+  ProtectedStream: TProtectedMemoryStream;
   Data: AnsiString;
   Buffer: array[0..255] of Byte;
 begin
   Data := 'Sensitive Data';
 
-  ProtectedStream := TProtectedStream.Create();
+  ProtectedStream := TProtectedMemoryStream.Create();
   try
     // Write data to the protected stream
     ProtectedStream.Write(PAnsiChar(Data)^, Length(Data));
@@ -34,6 +34,7 @@ begin
 
     // Unprotect the memory to allow reading
     ProtectedStream.IsProtected := False;
+    ProtectedStream.Position:=0;
     ProtectedStream.Read(Buffer, 10);
 
     // Display the first 10 bytes
@@ -42,4 +43,6 @@ begin
   finally
     ProtectedStream.Free;
   end;
+
+  Readln;
 end.
