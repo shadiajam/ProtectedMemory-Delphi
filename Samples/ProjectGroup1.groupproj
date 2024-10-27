@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{397998CC-6929-4827-A058-84009C2828C8}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="Protect String\ProtectString.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Protected Stream\ProtectedStreamSample.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="ProtectString">
+        <MSBuild Projects="Protect String\ProtectString.dproj"/>
+    </Target>
+    <Target Name="ProtectString:Clean">
+        <MSBuild Projects="Protect String\ProtectString.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ProtectString:Make">
+        <MSBuild Projects="Protect String\ProtectString.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ProtectedStreamSample">
+        <MSBuild Projects="Protected Stream\ProtectedStreamSample.dproj"/>
+    </Target>
+    <Target Name="ProtectedStreamSample:Clean">
+        <MSBuild Projects="Protected Stream\ProtectedStreamSample.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ProtectedStreamSample:Make">
+        <MSBuild Projects="Protected Stream\ProtectedStreamSample.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="ProtectString;ProtectedStreamSample"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="ProtectString:Clean;ProtectedStreamSample:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="ProtectString:Make;ProtectedStreamSample:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

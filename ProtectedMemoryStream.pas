@@ -1,8 +1,8 @@
 {
-  *****************************************************
-  * TProtectedStream - Secure memory stream handling  *
-  * Free Source Code snippet (For Delphi)             *
-  *****************************************************
+  **********************************************************
+  * TProtectedMemoryStream - Secure memory stream handling *
+  * Free Source Code snippet (For Delphi)                  *
+  **********************************************************
 
   Unit Information:
     * Purpose      : Provides secure memory protection for streams.
@@ -22,14 +22,14 @@
     Usage:
       * Example:
         var
-          Stream: TProtectedStream;
+          Stream: TProtectedMemoryStream;
           Data: AnsiString;
           Buffer: array[0..255] of Byte;
         begin
           Data := 'Sensitive Data';
 
           // Create the protected stream
-          Stream := TProtectedStream.Create;
+          Stream := TProtectedMemoryStream.Create;
           try
             // Write data to the stream
             Stream.Write(PAnsiChar(Data)^, Length(Data));
@@ -55,7 +55,7 @@
         end;
 }
 
-unit ProtectedStream;
+unit ProtectedMemoryStream;
 
 interface
 
@@ -63,12 +63,12 @@ uses
   System.SysUtils, System.Classes, Winapi.Windows,System.RTLConsts,System.Math;
 
 type
-  TProtectedStream = class(TMemoryStream)
+  TProtectedMemoryStream = class(TMemoryStream)
   private
     FProtected: Boolean;
     procedure SetProtected(const Value: Boolean);
   protected
-    function Realloc(var NewCapacity: Longint): Pointer;reintroduce;override;
+    function Realloc(var NewCapacity: NativeInt): Pointer;reintroduce;override;
   public
     property IsProtected: Boolean Read FProtected write SetProtected;
     procedure AfterConstruction; override;
@@ -77,9 +77,9 @@ type
 implementation
 
 
-{ TProtectedStream }
+{ TProtectedMemoryStream }
 
-procedure TProtectedStream.AfterConstruction;
+procedure TProtectedMemoryStream.AfterConstruction;
 begin
   inherited;
 end;
@@ -103,7 +103,7 @@ begin
   Result := NewPtr;
 end;
 
-function TProtectedStream.Realloc(var NewCapacity: Longint): Pointer;
+function TProtectedMemoryStream.Realloc(var NewCapacity: NativeInt): Pointer;
 const
   MemoryDelta = $2000; { Must be a power of 2 }
 begin
@@ -126,7 +126,7 @@ begin
   end;
 end;
 
-procedure TProtectedStream.SetProtected(const Value: Boolean);
+procedure TProtectedMemoryStream.SetProtected(const Value: Boolean);
 var
   OldProtect: DWORD;
 begin
